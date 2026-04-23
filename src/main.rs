@@ -2,5 +2,5 @@ use tanshuku::app::App;
 
 #[tokio::main]
 async fn main() {
-    App::build().run().await
+    App::build().await.run().await
 }

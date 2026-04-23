@@ -1,4 +1,6 @@
 mod api;
+mod model;
+mod utils;
 
 use axum::{Router, routing::get};
 

@@ -1,0 +1,1 @@
+create sequence IF NOT EXISTS "id_seq" START 1;
