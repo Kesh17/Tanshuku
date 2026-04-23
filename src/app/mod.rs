@@ -1,14 +1,17 @@
-use axum::{Router, routing::get};
 mod api;
+
+use axum::{Router, routing::get};
 
 pub struct App {
     router: Router,
 }
 
 impl App {
-    pub fn build() -> Self {
+    pub async fn build() -> Self {
         Self {
-            router: Router::new().route("/", get(api::get_index)),
+            router: Router::new()
+                .route("/", get(api::get_index))
+                .with_state(Self::setup_db_instance().await),
         }
     }
 
@@ -18,5 +21,12 @@ impl App {
             .unwrap();
         println!("Listening on {}", listener.local_addr().unwrap());
         axum::serve(listener, self.router).await.unwrap();
+    }
+
+    async fn setup_db_instance() -> sqlx::PgPool {
+        let db_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+        sqlx::PgPool::connect(&db_url)
+            .await
+            .expect("Failed to connect to database")
     }
 }
