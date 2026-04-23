@@ -13,6 +13,7 @@ impl App {
         Self {
             router: Router::new()
                 .route("/", get(api::get_index))
+                .route("/api", get(api::get_short_url))
                 .with_state(Self::setup_db_instance().await),
         }
     }
