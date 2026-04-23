@@ -13,15 +13,15 @@ impl App {
         Self {
             router: Router::new()
                 .route("/", get(api::get_index))
-                .route("/api", get(api::get_short_url))
+                .route("/api", get(api::get_short_url).post(api::set_short_url))
                 .with_state(Self::setup_db_instance().await),
         }
     }
 
     pub async fn run(self) {
-        let listener = tokio::net::TcpListener::bind("localhost:3000")
-            .await
-            .unwrap();
+        let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
+        let addr = std::env::var("BASE_URL").unwrap_or_else(|_| format!("localhost:{}", port));
+        let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
         println!("Listening on {}", listener.local_addr().unwrap());
         axum::serve(listener, self.router).await.unwrap();
     }

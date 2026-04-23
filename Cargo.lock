@@ -1431,6 +1431,7 @@ version = "0.1.0"
 dependencies = [
  "axum",
  "base62",
+ "dotenvy",
  "serde",
  "sqlx",
  "tokio",
