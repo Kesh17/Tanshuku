@@ -7,7 +7,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::app::model::ShortUrl;
+use crate::app::{AppState, model::ShortUrl, utils};
 
 pub async fn get_index() -> Html<String> {
     match tokio::fs::read_to_string("static/index.html").await {
@@ -39,58 +39,54 @@ impl IntoResponse for UrlResponse {
 
 #[axum::debug_handler]
 pub async fn get_short_url(
-    State(state): State<sqlx::PgPool>,
+    State(state): State<AppState>,
     Query(payload): Query<UrlRequest>,
-) -> impl IntoResponse {
-    let short_url = sqlx::query!(
-        "SELECT id, long_url, short_code, short_url FROM short_urls WHERE short_url = $1;",
-        payload.url.as_str()
-    )
-    .map(|x| {
-        ShortUrl::new(
-            x.id as i64,
-            Url::parse(&x.long_url).unwrap(),
-            x.short_code,
-            Url::parse(&x.short_url).unwrap(),
-        )
-    })
-    .fetch_one(&state)
-    .await;
-    match short_url {
-        Ok(val) => UrlResponse::ShortUrl(val),
-        Err(_) => UrlResponse::Message("URL not found".to_string()),
+) -> UrlResponse {
+    let short_code = payload
+        .url
+        .as_str()
+        .replace(state.config.get_url().as_str(), "");
+    // println!("{}", short_code);
+
+    match ShortUrl::get_url_from_db(&state.db, &short_code).await {
+        Ok(Some(val)) => UrlResponse::ShortUrl(val),
+        Ok(None) => UrlResponse::Message("Url not found".to_string()),
+        Err(_) => UrlResponse::Message("Database Error".to_string()),
     }
 }
 
 pub async fn set_short_url(
-    State(state): State<sqlx::PgPool>,
+    State(state): State<AppState>,
     Json(payload): Json<UrlRequest>,
-) -> impl IntoResponse {
-    let Ok(id) = sqlx::query!("SELECT nextval('id_seq') as id;")
-        .fetch_one(&state)
-        .await
-    else {
-        return UrlResponse::Message("Failed to generate ID".to_string());
-    };
-    let Ok(short_url_map) = ShortUrl::build(id.id.unwrap(), payload.url.clone()) else {
-        return UrlResponse::Message("Failed to create short URL".to_string());
-    };
+) -> UrlResponse {
+    let short_code = utils::generate_hash(payload.url.as_str());
+    match ShortUrl::get_url_from_db(&state.db, &short_code).await {
+        Ok(Some(val)) => {
+            // println!("Value present");
+            UrlResponse::ShortUrl(val)
+        }
+        Ok(None) => {
+            let Ok(short_url_map) = ShortUrl::build(&state.db, &state.config, payload.url).await
+            else {
+                return UrlResponse::Message("Database Error".to_string());
+            };
+            let Ok(_) = sqlx::query!(
+                r#"
+                    INSERT INTO short_urls (long_url, short_url, short_code)
+                    VALUES ($1, $2, $3);
+                "#,
+                short_url_map.long_url.as_str(),
+                short_url_map.short_url.as_str(),
+                short_url_map.short_code
+            )
+            .execute(&state.db)
+            .await
+            else {
+                return UrlResponse::Message("Database Error".to_string());
+            };
 
-    let row = sqlx::query!(
-        r#"
-            INSERT INTO short_urls (id, long_url, short_url, short_code)
-            VALUES ($1, $2, $3, $4);
-        "#,
-        short_url_map.id,
-        short_url_map.long_url.as_str(),
-        short_url_map.short_url.as_str(),
-        short_url_map.short_code
-    )
-    .execute(&state)
-    .await;
-
-    match row {
-        Ok(_) => UrlResponse::ShortUrl(short_url_map),
-        Err(_) => UrlResponse::Message("Failed to create short URL".to_string()),
+            UrlResponse::ShortUrl(short_url_map)
+        }
+        Err(_) => UrlResponse::Message("Database Error".to_string()),
     }
 }
