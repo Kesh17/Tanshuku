@@ -37,6 +37,7 @@ impl App {
             router: Router::new()
                 .route("/", get(api::get_index))
                 .route("/api", get(api::get_short_url).post(api::set_short_url))
+                .route("/{hex}", get(api::redirect_short_url))
                 .with_state(state.clone()),
             state: state,
         }

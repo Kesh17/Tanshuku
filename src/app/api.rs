@@ -1,6 +1,7 @@
 use axum::{
     Json,
-    extract::State,
+    extract::{Path, State},
+    http::StatusCode,
     response::{Html, Redirect},
 };
 use serde::Deserialize;
@@ -29,13 +30,24 @@ pub struct UrlRequest {
 pub async fn get_short_url(
     State(state): State<AppState>,
     AppQuery(payload): AppQuery<UrlRequest>,
-) -> Result<Redirect, AppError> {
+) -> Result<(StatusCode, Json<ShortUrl>), AppError> {
     let short_code = payload
         .url
         .as_str()
         .replace(state.config.get_url().as_str(), "");
 
     match ShortUrl::get_url_from_db(&state.db, &short_code).await {
+        Ok(Some(val)) => Ok((StatusCode::OK, Json(val))),
+        Ok(None) => Err(AppError::URLNotFound),
+        Err(e) => Err(e),
+    }
+}
+
+pub async fn redirect_short_url(
+    State(state): State<AppState>,
+    Path(path): Path<String>,
+) -> Result<Redirect, AppError> {
+    match ShortUrl::get_url_from_db(&state.db, &path).await {
         Ok(Some(val)) => Ok(Redirect::temporary(val.long_url.as_str())),
         Ok(None) => Err(AppError::URLNotFound),
         Err(e) => Err(e),

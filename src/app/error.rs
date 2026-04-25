@@ -21,10 +21,6 @@ pub enum AppError {
     ParseError(url::ParseError),
 }
 
-#[derive(FromRequest)]
-#[from_request(via(axum::Json), rejection(AppError))]
-pub struct AppJson<T>(pub T);
-
 #[derive(FromRequestParts)]
 #[from_request(via(Query), rejection(AppError))]
 pub struct AppQuery<T>(pub T);
