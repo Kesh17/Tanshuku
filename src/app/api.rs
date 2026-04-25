@@ -59,8 +59,8 @@ pub async fn set_short_url(
     State(state): State<AppState>,
     Json(payload): Json<UrlRequest>,
 ) -> UrlResponse {
-    let short_code = utils::generate_hash(payload.url.as_str());
-    match ShortUrl::get_url_from_db(&state.db, &short_code).await {
+    let short_code = &utils::generate_hash(payload.url.as_str())[..7];
+    match ShortUrl::get_url_from_db(&state.db, short_code).await {
         Ok(Some(val)) => {
             // println!("Value present");
             UrlResponse::ShortUrl(val)

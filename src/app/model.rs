@@ -1,10 +1,10 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sqlx::prelude::FromRow;
 use url::Url;
 
 use crate::app::{config::Config, error::AppError, utils};
 
-#[derive(Serialize, Debug, FromRow)]
+#[derive(Serialize, Deserialize, Debug, FromRow)]
 pub struct ShortUrl {
     pub long_url: Url,
     pub short_code: String,
@@ -38,19 +38,20 @@ impl ShortUrl {
         pool: &sqlx::PgPool,
         short_code: &str,
     ) -> Result<Option<Self>, AppError> {
-        sqlx::query!(
+        let row = sqlx::query!(
             "SELECT long_url, short_code, short_url FROM short_urls WHERE short_code = $1",
             short_code
         )
-        .map(|x| {
-            ShortUrl::new(
-                Url::parse(&x.long_url).unwrap(),
-                x.short_code,
-                Url::parse(&x.short_url).unwrap(),
-            )
-        })
         .fetch_optional(pool)
-        .await
-        .map_err(|_| AppError::DataBaseError)
+        .await?;
+
+        let Some(row) = row else {
+            return Ok(None);
+        };
+        Ok(Some(ShortUrl::new(
+            Url::parse(&row.long_url)?,
+            row.short_code,
+            Url::parse(&row.short_url)?,
+        )))
     }
 }

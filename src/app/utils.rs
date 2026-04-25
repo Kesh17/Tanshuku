@@ -6,11 +6,10 @@ use crate::app::{error::AppError, model::ShortUrl};
 
 pub fn generate_hash(long_url: &str) -> String {
     let hash = Sha256::digest(long_url);
-    hex::encode(hash)[..7].to_string()
+    hex::encode(hash).to_string()
 }
 pub async fn generate_short_code(pool: &sqlx::PgPool, long_url: &str) -> Result<String, AppError> {
-    let hash = Sha256::digest(long_url);
-    let hash = hex::encode(hash).to_string();
+    let hash = generate_hash(long_url);
 
     let result = 'outer: {
         for window in hash.as_bytes().windows(7) {
@@ -26,5 +25,5 @@ pub async fn generate_short_code(pool: &sqlx::PgPool, long_url: &str) -> Result<
 }
 
 pub fn generate_short_url(short_code: &str, base_url: &str) -> Result<Url, AppError> {
-    Url::parse(&format!("{}{}", base_url, short_code)).map_err(|_| AppError::ParseError)
+    Ok(Url::parse(&format!("{}{}", base_url, short_code))?)
 }
