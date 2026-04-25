@@ -4,6 +4,8 @@ mod error;
 mod model;
 mod utils;
 
+use std::sync::Arc;
+
 use axum::{Router, routing::get};
 
 use crate::app::config::Config;
@@ -16,14 +18,14 @@ pub struct App {
 #[derive(Clone)]
 struct AppState {
     pub db: sqlx::PgPool,
-    pub config: Config,
+    pub config: Arc<Config>,
 }
 
 impl AppState {
     async fn build() -> Self {
         Self {
             db: setup_db_instance().await,
-            config: Config::build(),
+            config: Arc::new(Config::build()),
         }
     }
 }

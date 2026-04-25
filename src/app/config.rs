@@ -1,4 +1,4 @@
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Config {
     pub base_url: String,
     pub port: String,
