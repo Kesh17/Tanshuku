@@ -4,11 +4,10 @@ mod error;
 mod model;
 mod utils;
 
-use std::sync::Arc;
-
-use axum::{Router, routing::get};
-
 use crate::app::config::Config;
+use axum::{Router, routing::get};
+use std::sync::Arc;
+use tower_http::services::{ServeDir, ServeFile};
 
 pub struct App {
     router: Router,
@@ -35,9 +34,11 @@ impl App {
         let state = AppState::build().await;
         Self {
             router: Router::new()
-                .route("/", get(api::get_index))
                 .route("/api", get(api::get_short_url).post(api::set_short_url))
                 .route("/{hex}", get(api::redirect_short_url))
+                .fallback_service(
+                    ServeDir::new("assets").fallback(ServeFile::new("assets/static/index.html")),
+                )
                 .with_state(state.clone()),
             state: state,
         }

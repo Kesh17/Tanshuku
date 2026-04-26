@@ -2,7 +2,7 @@ use axum::{
     Json,
     extract::{Path, State},
     http::StatusCode,
-    response::{Html, Redirect},
+    response::Redirect,
 };
 use serde::Deserialize;
 use url::Url;
@@ -13,13 +13,6 @@ use crate::app::{
     model::ShortUrl,
     utils,
 };
-
-pub async fn get_index() -> Html<String> {
-    match tokio::fs::read_to_string("static/index.html").await {
-        Ok(content) => Html(content),
-        Err(_) => Html(String::from("Page not found")),
-    }
-}
 
 #[derive(Deserialize, Debug)]
 pub struct UrlRequest {

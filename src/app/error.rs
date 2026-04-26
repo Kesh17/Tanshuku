@@ -3,7 +3,7 @@ use std::sync::Arc;
 use axum::{
     Json,
     extract::{
-        FromRequest, FromRequestParts, Query,
+        FromRequestParts, Query,
         rejection::{JsonRejection, QueryRejection},
     },
     http::StatusCode,
